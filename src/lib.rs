@@ -3,6 +3,7 @@ use std::fs;
 use std::fs::File;
 use std::io::{Read, Result};
 use std::path::PathBuf;
+mod statistics;
 
 use structopt::StructOpt;
 
@@ -90,23 +91,4 @@ pub fn del_exact_dups(files_by_size: HashMap<u64, Vec<&PathBuf>>) -> Result<()> 
     }
 
     Ok(())
-}
-
-pub mod statistics {
-    use std::path::PathBuf;
-
-    pub fn print_statistics(files: Vec<PathBuf>) {
-        print_paths_found(&files);
-    }
-
-    pub fn print_paths_found(files: &Vec<PathBuf>) {
-        print!("----STATISTICS----\n\r");
-        print!("\tPATHS FOUND:\n\r");
-
-        for file in files.iter() {
-            print!("\t\t{:?}\n\r", file);
-        }
-
-        print!("\tEND PATHS FOUND\n\r");
-    }
 }
