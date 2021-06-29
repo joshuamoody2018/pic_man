@@ -1,5 +1,5 @@
 use std::process;
-use no_duplicates::*;
+use pic_man::*;
 use structopt::StructOpt;
 
 fn main() {

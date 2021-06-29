@@ -1,5 +1,5 @@
 [package]
-name = "no_duplicates"
+name = "pic_man"
 version = "0.1.0"
 authors = ["Joshua Moody"]
 edition = "2018"
