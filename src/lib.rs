@@ -3,9 +3,10 @@ use std::fs;
 use std::fs::File;
 use std::io::{Read, Result};
 use std::path::PathBuf;
+use structopt::StructOpt;
+
 mod statistics;
 
-use structopt::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(name = "Options")]
@@ -25,6 +26,7 @@ pub struct Commands {
 
 pub fn run(opts: Commands) -> Result<()> {
     let files = get_files(&opts.path, opts.recursive)?;
+    println!("{:?}", files);
 
     if opts.del_dups {
         del_exact_dups(get_files_by_size(&files)?)?;
@@ -39,28 +41,44 @@ pub fn run(opts: Commands) -> Result<()> {
 
 pub fn get_files(path: &PathBuf, recursive: bool) -> Result<Vec<PathBuf>> {
     let mut files = vec![];
+    let mut dirs = vec![];
 
     for file_entry in fs::read_dir(&path)? {
+
         let file_entry = file_entry?.path();
+        // println!("{:?}", file_entry);
+
         if recursive {
-            files.extend(get_files(&path, recursive)?);
-        } else {
+            if file_entry.is_dir() {
+                dirs.push(file_entry);
+            }else if file_entry.is_file() {
+                files.push(file_entry);
+            }
+        }else {
             if file_entry.is_file() {
                 files.push(file_entry)
             }
+        }
+    }
+    // println!("{:?}", files);
+    // println!("{:?}", dirs);
+
+    if dirs.len() > 0 {
+        for dir in dirs.into_iter() {
+            files.append(&mut get_files(&dir, recursive)?);
         }
     }
 
     Ok(files)
 }
 
-pub fn get_files_by_size(paths: &Vec<PathBuf>) -> Result<HashMap<u64, Vec<&PathBuf>>> {
+pub fn get_files_by_size(files: &Vec<PathBuf>) -> Result<HashMap<u64, Vec<&PathBuf>>> {
     let mut size_names: HashMap<u64, Vec<&PathBuf>> = HashMap::new();
 
-    for file_entry in paths {
-        size_names.entry(fs::metadata(file_entry)?.len())
+    for file in files {
+        size_names.entry(fs::metadata(file)?.len())
             .or_insert(vec![])
-            .push(file_entry);
+            .push(file);
     }
 
     size_names.retain(|_, v| v.len() > 1);
@@ -68,25 +86,32 @@ pub fn get_files_by_size(paths: &Vec<PathBuf>) -> Result<HashMap<u64, Vec<&PathB
     Ok(size_names)
 }
 
-pub fn del_exact_dups(files_by_size: HashMap<u64, Vec<&PathBuf>>) -> Result<()> {
-    for (_, entries) in files_by_size {
+pub fn del_exact_dups(files: HashMap<u64, Vec<&PathBuf>>) -> Result<()> {
+    for (_, entries) in files {
         let mut entries = entries.iter();
 
         match entries.next() {
+
             Some(entry) => {
+                println!("{:?}", entry);
                 let mut buf_one = vec![];
                 File::open(entry)?.read_to_end(&mut buf_one)?;
 
                 while let Some(entry) = entries.next() {
+                    println!("{:?}", entry);
                     let mut buf_two = vec![];
                     File::open(entry)?.read_to_end(&mut buf_two)?;
 
                     if buf_one == buf_two {
+                        println!("Deleting {:?}", entry);
+
                         fs::remove_file(entry)?;
                     }
                 }
             }
+
             None => continue,
+
         }
     }
 
