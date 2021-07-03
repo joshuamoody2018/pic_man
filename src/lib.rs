@@ -7,7 +7,6 @@ use structopt::StructOpt;
 
 mod statistics;
 
-
 #[derive(StructOpt)]
 #[structopt(name = "Options")]
 pub struct Commands {
@@ -26,14 +25,15 @@ pub struct Commands {
 
 pub fn run(opts: Commands) -> Result<()> {
     let files = get_files(&opts.path, opts.recursive)?;
-    println!("{:?}", files);
+    let stats = statistics::Statistics::new(&files);
+    let files_by_size = get_files_by_size(&files)?;
 
     if opts.del_dups {
-        del_exact_dups(get_files_by_size(&files)?)?;
+        del_exact_dups(files_by_size)?;
     }
 
     if opts.statistics {
-        statistics::print_statistics(files);
+        stats.print_statistics();
     }
 
     Ok(())
@@ -46,7 +46,6 @@ pub fn get_files(path: &PathBuf, recursive: bool) -> Result<Vec<PathBuf>> {
     for file_entry in fs::read_dir(&path)? {
 
         let file_entry = file_entry?.path();
-        // println!("{:?}", file_entry);
 
         if recursive {
             if file_entry.is_dir() {
@@ -60,8 +59,6 @@ pub fn get_files(path: &PathBuf, recursive: bool) -> Result<Vec<PathBuf>> {
             }
         }
     }
-    // println!("{:?}", files);
-    // println!("{:?}", dirs);
 
     if dirs.len() > 0 {
         for dir in dirs.into_iter() {
@@ -93,17 +90,14 @@ pub fn del_exact_dups(files: HashMap<u64, Vec<&PathBuf>>) -> Result<()> {
         match entries.next() {
 
             Some(entry) => {
-                println!("{:?}", entry);
                 let mut buf_one = vec![];
                 File::open(entry)?.read_to_end(&mut buf_one)?;
 
                 while let Some(entry) = entries.next() {
-                    println!("{:?}", entry);
                     let mut buf_two = vec![];
                     File::open(entry)?.read_to_end(&mut buf_two)?;
 
                     if buf_one == buf_two {
-                        println!("Deleting {:?}", entry);
 
                         fs::remove_file(entry)?;
                     }
