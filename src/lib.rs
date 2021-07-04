@@ -4,10 +4,11 @@ use std::fs::File;
 use std::io::{Read, Result};
 use std::path::PathBuf;
 use structopt::StructOpt;
+use crate::statistics::Statistics::{NumPathsFound, PathsFound};
 
 mod statistics;
 
-#[derive(StructOpt)]
+#[derive(Debug, StructOpt)]
 #[structopt(name = "Options")]
 pub struct Commands {
     #[structopt(short = "p", long = "path", default_value = ".", parse(from_os_str))]
@@ -24,8 +25,7 @@ pub struct Commands {
 }
 
 pub fn run(opts: Commands) -> Result<()> {
-    let files = get_files(&opts.path, opts.recursive)?;
-    let stats = statistics::Statistics::new(&files);
+    let (files, dirs) = get_paths(&opts.path, opts.recursive)?;
     let files_by_size = get_files_by_size(&files)?;
 
     if opts.del_dups {
@@ -33,13 +33,16 @@ pub fn run(opts: Commands) -> Result<()> {
     }
 
     if opts.statistics {
-        stats.print_statistics();
+        statistics::print_statistics(vec![
+            NumPathsFound((files.len(), dirs.len())),
+            PathsFound(&files),
+        ]);
     }
 
     Ok(())
 }
 
-pub fn get_files(path: &PathBuf, recursive: bool) -> Result<Vec<PathBuf>> {
+pub fn get_paths(path: &PathBuf, recursive: bool) -> Result<(Vec<PathBuf>,Vec<PathBuf>)> {
     let mut files = vec![];
     let mut dirs = vec![];
 
@@ -59,14 +62,17 @@ pub fn get_files(path: &PathBuf, recursive: bool) -> Result<Vec<PathBuf>> {
             }
         }
     }
+    let mut dirs_copy = dirs.clone();
 
     if dirs.len() > 0 {
-        for dir in dirs.into_iter() {
-            files.append(&mut get_files(&dir, recursive)?);
+        for dir in dirs.iter() {
+            let (more_files, more_dirs) = &mut get_paths(&dir, recursive)?;
+            files.append(more_files);
+            dirs_copy.append(more_dirs);
         }
     }
 
-    Ok(files)
+    Ok((files, dirs_copy))
 }
 
 pub fn get_files_by_size(files: &Vec<PathBuf>) -> Result<HashMap<u64, Vec<&PathBuf>>> {
