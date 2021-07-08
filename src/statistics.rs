@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 pub enum Statistics<'a> {
     PathsFound(&'a Vec<PathBuf>),
-    NumPathsFound((usize, usize)),
+    NumPathsFound((usize, u32)),
 }
 
 pub fn print_statistics(stats: Vec<Statistics>) {
@@ -23,7 +23,7 @@ fn print_paths_found(paths: &Vec<PathBuf>) {
     }
 }
 
-fn print_num_paths_found(num_files: usize, num_dirs: usize) {
+fn print_num_paths_found(num_files: usize, num_dirs: u32) {
 
     println!("\tNUMBER OF FILES FOUND: {}",num_files);
     println!("\tNUMBER OF DIRECTORIES FOUND: {}",num_dirs);
