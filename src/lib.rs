@@ -22,6 +22,9 @@ pub struct Commands {
 
     #[structopt(short = "s", long = "statistics")]
     pub statistics: bool,
+
+    #[structopt(short = "f", long = "find")]
+    pub find: Option<String>,
 }
 
 pub fn run(opts: Commands) -> Result<()> {
@@ -30,6 +33,13 @@ pub fn run(opts: Commands) -> Result<()> {
 
     if opts.del_dups {
         del_exact_dups(files_by_size)?;
+    }
+
+    if let Some(query) = opts.find {
+        match find_file(&opts.path, &query, opts.recursive)? {
+            Some(p) => println!("File path for {} is: {:?}", &query, p),
+            None => println!("File {} not found.", &query),
+        };
     }
 
     if opts.statistics {
@@ -117,4 +127,15 @@ pub fn del_exact_dups(files: HashMap<u64, Vec<&PathBuf>>) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn find_file<'a>(path: &'a PathBuf, query: &'a str, recursive: bool) -> Result<Option<PathBuf>> {
+    let (files, _): (Vec<PathBuf>, _) = get_paths(path, recursive)?;
+
+    Ok(
+        files.into_iter()
+            .find(move |f|
+                *f == PathBuf::from(query)
+            )
+    )
 }
